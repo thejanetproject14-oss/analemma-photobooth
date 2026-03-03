@@ -47,13 +47,15 @@ const StickerEditor = ({ imageUrl, onDone, onCancel }: StickerEditorProps) => {
       };
 
       const handleMove = (ev: PointerEvent) => {
-        if (!dragRef.current) return;
+        const drag = dragRef.current;
+        if (!drag) return;
         const r = container.getBoundingClientRect();
-        const x = ((ev.clientX - r.left - dragRef.current.offsetX) / r.width) * 100;
-        const y = ((ev.clientY - r.top - dragRef.current.offsetY) / r.height) * 100;
+        const x = ((ev.clientX - r.left - drag.offsetX) / r.width) * 100;
+        const y = ((ev.clientY - r.top - drag.offsetY) / r.height) * 100;
+        const dragId = drag.id;
         setStickers((prev) =>
           prev.map((s) =>
-            s.id === dragRef.current!.id
+            s.id === dragId
               ? { ...s, x: Math.max(0, Math.min(100, x)), y: Math.max(0, Math.min(100, y)) }
               : s
           )
