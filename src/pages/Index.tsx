@@ -213,6 +213,21 @@ const Index = () => {
     ctx.textAlign = "center";
     ctx.fillText("analemma.shop", totalW / 2, totalH - borderWidth - footerHeight * 0.2);
 
+    // Date stamp
+    if (showTimestamp && captureTime) {
+      const fmt = captureTime.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+      const timeFmt = captureTime.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
+      const stampText = `${fmt} • ${timeFmt}`;
+      const stampSize = Math.round(stripW * 0.04);
+      ctx.save();
+      ctx.globalAlpha = 0.7;
+      ctx.fillStyle = "#D4740F";
+      ctx.font = `600 ${stampSize}px 'Caveat', cursive`;
+      ctx.textAlign = "right";
+      ctx.fillText(stampText, totalW - borderWidth - Math.round(stripW * 0.02), totalH - borderWidth - footerHeight * 0.65);
+      ctx.restore();
+    }
+
     const url = canvas.toDataURL("image/jpeg", 0.92);
     setStripUrl(url);
     setPhase("preview");
