@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from "react";
-import { Camera } from "lucide-react";
+import { Camera, Clock } from "lucide-react";
 import { useCamera } from "@/hooks/useCamera";
 import { FRAMES, type FrameConfig } from "@/lib/frames";
 import { FILTERS, type FilterConfig } from "@/lib/filters";
@@ -10,6 +10,7 @@ import FilterSelector from "@/components/FilterSelector";
 import ShutterButton from "@/components/ShutterButton";
 import PhotoPreview from "@/components/PhotoPreview";
 import StickerEditor from "@/components/StickerEditor";
+import { Switch } from "@/components/ui/switch";
 
 type AppPhase = "camera" | "countdown" | "preview" | "stickers";
 
@@ -27,6 +28,8 @@ const Index = () => {
   const [capturedPhotos, setCapturedPhotos] = useState<string[]>([]); // individual data URLs
   const [stripUrl, setStripUrl] = useState<string | null>(null);
   const [showFlash, setShowFlash] = useState(false);
+  const [showTimestamp, setShowTimestamp] = useState(true);
+  const [captureTime, setCaptureTime] = useState<Date | null>(null);
   const [viewportSize, setViewportSize] = useState({ w: 0, h: 0 });
   const viewfinderRef = useRef<HTMLDivElement>(null);
 
@@ -120,6 +123,7 @@ const Index = () => {
   // Start the 3-photo sequence
   const startCapture = useCallback(async () => {
     setCapturedPhotos([]);
+    setCaptureTime(new Date());
     for (let i = 0; i < PHOTOS_PER_STRIP; i++) {
       await runCountdown(i);
       if (i < PHOTOS_PER_STRIP - 1) {
@@ -209,6 +213,21 @@ const Index = () => {
     ctx.textAlign = "center";
     ctx.fillText("analemma.shop", totalW / 2, totalH - borderWidth - footerHeight * 0.2);
 
+    // Date stamp
+    if (showTimestamp && captureTime) {
+      const fmt = captureTime.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+      const timeFmt = captureTime.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
+      const stampText = `${fmt} • ${timeFmt}`;
+      const stampSize = Math.round(stripW * 0.04);
+      ctx.save();
+      ctx.globalAlpha = 0.7;
+      ctx.fillStyle = "#D4740F";
+      ctx.font = `600 ${stampSize}px 'Caveat', cursive`;
+      ctx.textAlign = "right";
+      ctx.fillText(stampText, totalW - borderWidth - Math.round(stripW * 0.02), totalH - borderWidth - footerHeight * 0.65);
+      ctx.restore();
+    }
+
     const url = canvas.toDataURL("image/jpeg", 0.92);
     setStripUrl(url);
     setPhase("preview");
@@ -232,36 +251,73 @@ const Index = () => {
   }, []);
 
   const handleStickersComplete = useCallback(
-    (stickers: StickerInstance[]) => {
-      if (!stripUrl || stickers.length === 0) {
+    (stickerList: StickerInstance[]) => {
+      if (!stripUrl || stickerList.length === 0) {
         setPhase("preview");
         return;
       }
 
-      // Render stickers onto the strip
-      const img = new Image();
-      img.onload = () => {
+      const baseImg = new Image();
+      baseImg.onload = () => {
         const canvas = document.createElement("canvas");
-        canvas.width = img.width;
-        canvas.height = img.height;
+        canvas.width = baseImg.width;
+        canvas.height = baseImg.height;
         const ctx = canvas.getContext("2d")!;
-        ctx.drawImage(img, 0, 0);
+        ctx.drawImage(baseImg, 0, 0);
 
-        stickers.forEach((s) => {
-          const x = (s.x / 100) * img.width;
-          const y = (s.y / 100) * img.height;
-          const fontSize = Math.round((s.size / 400) * img.width);
-          ctx.font = `${fontSize}px serif`;
-          ctx.textAlign = "center";
-          ctx.textBaseline = "middle";
-          ctx.fillText(s.emoji, x, y);
+        // We need to load all image stickers first, then draw
+        const imageStickers = stickerList.filter((s) => s.imageUrl);
+        const emojiStickers = stickerList.filter((s) => s.emoji);
+
+        const loadImages = imageStickers.map(
+          (s) =>
+            new Promise<{ sticker: StickerInstance; img: HTMLImageElement }>((resolve) => {
+              const img = new Image();
+              img.crossOrigin = "anonymous";
+              img.onload = () => resolve({ sticker: s, img });
+              img.onerror = () => resolve({ sticker: s, img });
+              img.src = s.imageUrl!;
+            })
+        );
+
+        Promise.all(loadImages).then((loaded) => {
+          // Draw emoji stickers
+          emojiStickers.forEach((s) => {
+            const x = (s.x / 100) * baseImg.width;
+            const y = (s.y / 100) * baseImg.height;
+            const stickerW = (s.size / 100) * baseImg.width;
+            const fontSize = Math.round(stickerW * 0.8);
+            ctx.save();
+            ctx.translate(x, y);
+            ctx.rotate((s.rotation * Math.PI) / 180);
+            ctx.font = `${fontSize}px serif`;
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillText(s.emoji!, 0, 0);
+            ctx.restore();
+          });
+
+          // Draw image stickers
+          loaded.forEach(({ sticker: s, img }) => {
+            const x = (s.x / 100) * baseImg.width;
+            const y = (s.y / 100) * baseImg.height;
+            const stickerW = (s.size / 100) * baseImg.width;
+            const stickerH = img.naturalHeight
+              ? (stickerW / img.naturalWidth) * img.naturalHeight
+              : stickerW;
+            ctx.save();
+            ctx.translate(x, y);
+            ctx.rotate((s.rotation * Math.PI) / 180);
+            ctx.drawImage(img, -stickerW / 2, -stickerH / 2, stickerW, stickerH);
+            ctx.restore();
+          });
+
+          const newUrl = canvas.toDataURL("image/jpeg", 0.92);
+          setStripUrl(newUrl);
+          setPhase("preview");
         });
-
-        const newUrl = canvas.toDataURL("image/jpeg", 0.92);
-        setStripUrl(newUrl);
-        setPhase("preview");
       };
-      img.src = stripUrl;
+      baseImg.src = stripUrl;
     },
     [stripUrl]
   );
@@ -400,6 +456,13 @@ const Index = () => {
 
           {/* Frame picker */}
           <FrameSelector selectedId={selectedFrameId} onSelect={setSelectedFrameId} />
+
+          {/* Timestamp toggle */}
+          <div className="flex items-center justify-center gap-2 py-1">
+            <Clock size={14} className="text-muted-foreground" />
+            <span className="text-xs text-muted-foreground">Date stamp</span>
+            <Switch checked={showTimestamp} onCheckedChange={setShowTimestamp} />
+          </div>
 
           {/* Shutter */}
           <div className="flex flex-col items-center gap-1 py-2">

@@ -16,6 +16,7 @@ export default {
       fontFamily: {
         sans: ['Inter', 'sans-serif'],
         display: ['Playfair Display', 'serif'],
+        handwritten: ['Caveat', 'cursive'],
       },
       colors: {
         border: "hsl(var(--border))",
@@ -59,6 +60,7 @@ export default {
           "gold-light": "hsl(var(--brand-gold-light))",
           berry: "hsl(var(--brand-berry))",
           warm: "hsl(var(--brand-warm))",
+          stamp: "hsl(var(--brand-stamp))",
         },
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",
