@@ -457,6 +457,13 @@ const Index = () => {
           {/* Frame picker */}
           <FrameSelector selectedId={selectedFrameId} onSelect={setSelectedFrameId} />
 
+          {/* Timestamp toggle */}
+          <div className="flex items-center justify-center gap-2 py-1">
+            <Clock size={14} className="text-muted-foreground" />
+            <span className="text-xs text-muted-foreground">Date stamp</span>
+            <Switch checked={showTimestamp} onCheckedChange={setShowTimestamp} />
+          </div>
+
           {/* Shutter */}
           <div className="flex flex-col items-center gap-1 py-2">
             <ShutterButton onClick={startCapture} disabled={!isReady || phase === "countdown"} />
