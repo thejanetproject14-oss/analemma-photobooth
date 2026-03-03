@@ -27,6 +27,8 @@ const Index = () => {
   const [capturedPhotos, setCapturedPhotos] = useState<string[]>([]); // individual data URLs
   const [stripUrl, setStripUrl] = useState<string | null>(null);
   const [showFlash, setShowFlash] = useState(false);
+  const [showTimestamp, setShowTimestamp] = useState(true);
+  const [captureTime, setCaptureTime] = useState<Date | null>(null);
   const [viewportSize, setViewportSize] = useState({ w: 0, h: 0 });
   const viewfinderRef = useRef<HTMLDivElement>(null);
 
