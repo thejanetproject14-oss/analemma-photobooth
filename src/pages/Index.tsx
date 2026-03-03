@@ -122,6 +122,7 @@ const Index = () => {
   // Start the 3-photo sequence
   const startCapture = useCallback(async () => {
     setCapturedPhotos([]);
+    setCaptureTime(new Date());
     for (let i = 0; i < PHOTOS_PER_STRIP; i++) {
       await runCountdown(i);
       if (i < PHOTOS_PER_STRIP - 1) {
