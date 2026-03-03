@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from "react";
-import { Camera } from "lucide-react";
+import { Camera, Clock } from "lucide-react";
 import { useCamera } from "@/hooks/useCamera";
 import { FRAMES, type FrameConfig } from "@/lib/frames";
 import { FILTERS, type FilterConfig } from "@/lib/filters";
@@ -10,6 +10,7 @@ import FilterSelector from "@/components/FilterSelector";
 import ShutterButton from "@/components/ShutterButton";
 import PhotoPreview from "@/components/PhotoPreview";
 import StickerEditor from "@/components/StickerEditor";
+import { Switch } from "@/components/ui/switch";
 
 type AppPhase = "camera" | "countdown" | "preview" | "stickers";
 
