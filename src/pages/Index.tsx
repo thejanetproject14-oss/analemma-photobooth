@@ -251,36 +251,73 @@ const Index = () => {
   }, []);
 
   const handleStickersComplete = useCallback(
-    (stickers: StickerInstance[]) => {
-      if (!stripUrl || stickers.length === 0) {
+    (stickerList: StickerInstance[]) => {
+      if (!stripUrl || stickerList.length === 0) {
         setPhase("preview");
         return;
       }
 
-      // Render stickers onto the strip
-      const img = new Image();
-      img.onload = () => {
+      const baseImg = new Image();
+      baseImg.onload = () => {
         const canvas = document.createElement("canvas");
-        canvas.width = img.width;
-        canvas.height = img.height;
+        canvas.width = baseImg.width;
+        canvas.height = baseImg.height;
         const ctx = canvas.getContext("2d")!;
-        ctx.drawImage(img, 0, 0);
+        ctx.drawImage(baseImg, 0, 0);
 
-        stickers.forEach((s) => {
-          const x = (s.x / 100) * img.width;
-          const y = (s.y / 100) * img.height;
-          const fontSize = Math.round((s.size / 400) * img.width);
-          ctx.font = `${fontSize}px serif`;
-          ctx.textAlign = "center";
-          ctx.textBaseline = "middle";
-          ctx.fillText(s.emoji, x, y);
+        // We need to load all image stickers first, then draw
+        const imageStickers = stickerList.filter((s) => s.imageUrl);
+        const emojiStickers = stickerList.filter((s) => s.emoji);
+
+        const loadImages = imageStickers.map(
+          (s) =>
+            new Promise<{ sticker: StickerInstance; img: HTMLImageElement }>((resolve) => {
+              const img = new Image();
+              img.crossOrigin = "anonymous";
+              img.onload = () => resolve({ sticker: s, img });
+              img.onerror = () => resolve({ sticker: s, img });
+              img.src = s.imageUrl!;
+            })
+        );
+
+        Promise.all(loadImages).then((loaded) => {
+          // Draw emoji stickers
+          emojiStickers.forEach((s) => {
+            const x = (s.x / 100) * baseImg.width;
+            const y = (s.y / 100) * baseImg.height;
+            const stickerW = (s.size / 100) * baseImg.width;
+            const fontSize = Math.round(stickerW * 0.8);
+            ctx.save();
+            ctx.translate(x, y);
+            ctx.rotate((s.rotation * Math.PI) / 180);
+            ctx.font = `${fontSize}px serif`;
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillText(s.emoji!, 0, 0);
+            ctx.restore();
+          });
+
+          // Draw image stickers
+          loaded.forEach(({ sticker: s, img }) => {
+            const x = (s.x / 100) * baseImg.width;
+            const y = (s.y / 100) * baseImg.height;
+            const stickerW = (s.size / 100) * baseImg.width;
+            const stickerH = img.naturalHeight
+              ? (stickerW / img.naturalWidth) * img.naturalHeight
+              : stickerW;
+            ctx.save();
+            ctx.translate(x, y);
+            ctx.rotate((s.rotation * Math.PI) / 180);
+            ctx.drawImage(img, -stickerW / 2, -stickerH / 2, stickerW, stickerH);
+            ctx.restore();
+          });
+
+          const newUrl = canvas.toDataURL("image/jpeg", 0.92);
+          setStripUrl(newUrl);
+          setPhase("preview");
         });
-
-        const newUrl = canvas.toDataURL("image/jpeg", 0.92);
-        setStripUrl(newUrl);
-        setPhase("preview");
       };
-      img.src = stripUrl;
+      baseImg.src = stripUrl;
     },
     [stripUrl]
   );
