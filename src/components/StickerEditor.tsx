@@ -72,6 +72,9 @@ const StickerEditor = ({ imageUrl, onDone, onCancel }: StickerEditorProps) => {
       const container = containerRef.current;
       if (!container) return;
 
+      // Capture pointer for reliable mobile tracking
+      (e.target as HTMLElement).setPointerCapture(e.pointerId);
+
       const rect = container.getBoundingClientRect();
       const currentX = (sticker.x / 100) * rect.width;
       const currentY = (sticker.y / 100) * rect.height;
@@ -86,10 +89,13 @@ const StickerEditor = ({ imageUrl, onDone, onCancel }: StickerEditorProps) => {
       const handleMove = (ev: PointerEvent) => {
         const drag = dragRef.current;
         if (!drag || drag.action !== "move") return;
+        ev.preventDefault();
         const r = container.getBoundingClientRect();
-        const x = ((ev.clientX - r.left - drag.offsetX) / r.width) * 100;
-        const y = ((ev.clientY - r.top - drag.offsetY) / r.height) * 100;
         const dragId = drag.id;
+        const ox = drag.offsetX;
+        const oy = drag.offsetY;
+        const x = ((ev.clientX - r.left - ox) / r.width) * 100;
+        const y = ((ev.clientY - r.top - oy) / r.height) * 100;
         setStickers((prev) =>
           prev.map((s) =>
             s.id === dragId
@@ -99,14 +105,18 @@ const StickerEditor = ({ imageUrl, onDone, onCancel }: StickerEditorProps) => {
         );
       };
 
-      const handleUp = () => {
+      const cleanup = () => {
         dragRef.current = null;
         window.removeEventListener("pointermove", handleMove);
-        window.removeEventListener("pointerup", handleUp);
+        window.removeEventListener("pointerup", cleanup);
+        window.removeEventListener("pointercancel", cleanup);
+        window.removeEventListener("lostpointercapture", cleanup as EventListener);
       };
 
-      window.addEventListener("pointermove", handleMove);
-      window.addEventListener("pointerup", handleUp);
+      window.addEventListener("pointermove", handleMove, { passive: false });
+      window.addEventListener("pointerup", cleanup);
+      window.addEventListener("pointercancel", cleanup);
+      window.addEventListener("lostpointercapture", cleanup as EventListener);
     },
     []
   );
@@ -118,6 +128,9 @@ const StickerEditor = ({ imageUrl, onDone, onCancel }: StickerEditorProps) => {
       e.stopPropagation();
       const container = containerRef.current;
       if (!container) return;
+
+      (e.target as HTMLElement).setPointerCapture(e.pointerId);
+
       const rect = container.getBoundingClientRect();
       const cx = (sticker.x / 100) * rect.width + rect.left;
       const cy = (sticker.y / 100) * rect.height + rect.top;
@@ -138,6 +151,7 @@ const StickerEditor = ({ imageUrl, onDone, onCancel }: StickerEditorProps) => {
       const handleMove = (ev: PointerEvent) => {
         const drag = dragRef.current;
         if (!drag || drag.action !== "resize") return;
+        ev.preventDefault();
         const r = container.getBoundingClientRect();
         const ccx = (sticker.x / 100) * r.width + r.left;
         const ccy = (sticker.y / 100) * r.height + r.top;
@@ -154,14 +168,18 @@ const StickerEditor = ({ imageUrl, onDone, onCancel }: StickerEditorProps) => {
         );
       };
 
-      const handleUp = () => {
+      const cleanup = () => {
         dragRef.current = null;
         window.removeEventListener("pointermove", handleMove);
-        window.removeEventListener("pointerup", handleUp);
+        window.removeEventListener("pointerup", cleanup);
+        window.removeEventListener("pointercancel", cleanup);
+        window.removeEventListener("lostpointercapture", cleanup as EventListener);
       };
 
-      window.addEventListener("pointermove", handleMove);
-      window.addEventListener("pointerup", handleUp);
+      window.addEventListener("pointermove", handleMove, { passive: false });
+      window.addEventListener("pointerup", cleanup);
+      window.addEventListener("pointercancel", cleanup);
+      window.addEventListener("lostpointercapture", cleanup as EventListener);
     },
     []
   );
