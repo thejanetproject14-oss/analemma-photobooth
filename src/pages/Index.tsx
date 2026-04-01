@@ -67,13 +67,11 @@ const Index = () => {
       canvas.height = h;
       const ctx = canvas.getContext("2d")!;
 
-      // Apply filter
+      // Mirror + apply filter together inside save/restore
+      ctx.save();
       if (selectedFilter.css !== "none") {
         ctx.filter = selectedFilter.css;
       }
-
-      // Mirror
-      ctx.save();
       ctx.translate(w, 0);
       ctx.scale(-1, 1);
       ctx.drawImage(video, 0, 0, w, h);
